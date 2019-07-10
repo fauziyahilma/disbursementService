@@ -60,8 +60,10 @@ Class Disburse {
 
         $array=array($bank_code=>'string', $account_number=>'string', $amount=>'int', $remark=>'string');
         $errmessage = "Request failed due to incomplete data \n Press Enter to go back to main menu \n";
+        $action ='sendData';
+        $data = $bank_code.',' .$account_number.',' .$amount.',' .$remark;
 
-        $this->validateInput($array, $this->sendData($bank_code, $account_number, $amount, $remark), $errmessage);
+        $this->validateInput($array, $action, $data, $errmessage);
     }
 
     public function inputCheck(){
@@ -76,9 +78,11 @@ Class Disburse {
             $input_id= fopen("php://stdin","r");
             $id = trim(fgets($input_id));
             $array = array($id=>'int');
-            $errmessage = 'Transaction Id is invalid. Press enter to go back to main menu \n';
+            $errmessage = "Transaction Id is invalid. Press enter to go back to main menu \n";
+            $action ='checkData';
+            $data = $id;
 
-            $this->validateInput($array, $this->checkData($id), $errmessage);
+            $this->validateInput($array, $action, $data, $errmessage);
         }
         else{
             $msg = "No transaction available to be checked. Press enter to go back to main menu \n";
@@ -86,12 +90,12 @@ Class Disburse {
         }
     }
 
-    public function validateInput($array, $action, $msg){
+    public function validateInput($array, $action, $data, $msg){
 
         $f=0;
         foreach($array as $k=>$v){
             if($v==='string'){
-                if($k=''){
+                if($k===''){
                     $f++;
                 }
             }
@@ -99,15 +103,16 @@ Class Disburse {
                 if($k<1){
                     $f++;
                 }
-            } 
+            }  
         }
         if($f===0){
-            $action;
+            $this->$action($data);
             // echo "pass";
         }
         else{
             $this->messageBox($msg);
         }
+
     }
 
     public function request($url, $method, $data=""){
@@ -148,8 +153,7 @@ Class Disburse {
         }
         else{
             print_r($result);
-        }
-        
+        }      
     }
 
     public function checkData($id){
@@ -222,7 +226,6 @@ Class Disburse {
 
     public function exitDisburse(){
         exit('You have closed the application.');
-
     }
 
 }
