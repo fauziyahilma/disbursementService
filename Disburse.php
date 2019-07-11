@@ -1,25 +1,19 @@
 <?php
-
 Class Disburse {
-
     private $db;
-
     public function __construct(){
         $this->db = new Database();
         $this->inputMenu();
     }
 
     public function inputMenu(){
-
         echo "Type 'request' to send disbursement request,\nType 'check' to check disbursement status\nType 'exit' to exit the application: ";
         $input_menu= fopen("php://stdin","r");
         $menu = trim(fgets($input_menu));
-
         $this->processMenu($menu);
     }
 
     public function processMenu($menu){
-
         switch($menu){
             case 'request':
                 $this->inputRequest();
@@ -44,7 +38,6 @@ Class Disburse {
     }
 
     public function inputRequest(){
-
         echo "Type Bank Code: ";
         $input_bank_code= fopen("php://stdin","r");
         $bank_code = trim(fgets($input_bank_code));
@@ -57,23 +50,26 @@ Class Disburse {
         echo "Type Remark: ";
         $input_remark= fopen("php://stdin","r");
         $remark = trim(fgets($input_remark));
-
-        $array=array($bank_code=>'string', $account_number=>'string', $amount=>'int', $remark=>'string');
+        $array=array($bank_code=>'string', $account_number=>'int', $amount=>'int', $remark=>'string');
         $errmessage = "Request failed due to incomplete data \n Press Enter to go back to main menu \n";
         $action ='sendData';
-        $data = $bank_code.',' .$account_number.',' .$amount.',' .$remark;
-
+        $data = "bank_code=".$bank_code."&account_number=".$account_number."&amount=".$amount."&remark=".$remark.""; 
         $this->validateInput($array, $action, $data, $errmessage);
     }
 
-    public function inputCheck(){
+    public function getData(){
+        $this->db->query('SELECT * FROM transaction');
+        return $this->db->resultSet();
+    }
 
+    public function inputCheck(){
         if($result = $this->getData()){
             echo "Transaction list \n";
             echo "---------------- \n";
             foreach($result as $r){
-                echo $r['id']."\n";
+                echo " > ".$r['id']."\n";
             }
+            echo "---------------- \n";
             echo "Type transaction Id:";
             $input_id= fopen("php://stdin","r");
             $id = trim(fgets($input_id));
@@ -81,7 +77,6 @@ Class Disburse {
             $errmessage = "Transaction Id is invalid. Press enter to go back to main menu \n";
             $action ='checkData';
             $data = $id;
-
             $this->validateInput($array, $action, $data, $errmessage);
         }
         else{
@@ -91,7 +86,6 @@ Class Disburse {
     }
 
     public function validateInput($array, $action, $data, $msg){
-
         $f=0;
         foreach($array as $k=>$v){
             if($v==='string'){
@@ -112,14 +106,11 @@ Class Disburse {
         else{
             $this->messageBox($msg);
         }
-
     }
 
     public function request($url, $method, $data=""){
-
         $secret_key = "HyzioY7LP6ZoO7nTYKbG8O4ISkyWnX1JvAEVAhtWKZumooCzqp41";
         $encoded_auth = base64_encode($secret_key.":");
-
         $curl = curl_init();
     
         curl_setopt_array($curl, array(
@@ -136,7 +127,6 @@ Class Disburse {
             "Authorization: Basic ".$encoded_auth
           ),
         ));
-
         $response = curl_exec($curl);
         $err = curl_error($curl);
         $data = json_decode($response, true);
@@ -145,24 +135,50 @@ Class Disburse {
         return $data;
     }
 
-    public function sendData($a, $b, $c, $d='-'){
+    public function sendData($data){
+   
         $url = "https://nextar.flip.id/disburse";
-        $data = "bank_code=".$a."&account_number=".$b."&amount=".$c."&remark=".$d."";
         if($result = $this->request($url,"POST", $data)){
+            // print_r($result);
             $this->save($result);
         }
         else{
-            print_r($result);
+            echo "error";
         }      
     }
 
-    public function checkData($id){
+    public function save($data){
+        $query = "INSERT INTO transaction VALUES (:id, :amount, :status, :timestamp, :bank_code, :account_number, :beneficiary_name, :remark, :receipt, :time_served, :fee)";
+        $this->db->query($query);
+        foreach($data as $k => $v){
+            $this->db->bind($k, $v);
+        }
+        $this->db->execute();
+        if($this->db->row()){
+            echo "Transaction request succeeded.\n";
+            echo "------------------------------\n";
+            foreach($data as $k=>$v){
+                echo "\t".$k." : ".$v. "\n";
+            }
+            echo "------------------------------\n";
+            $msg = "Transaction detail saved to database. Press enter to go back to main menu"; 
+            $this->messageBox($msg);
+        }
+    }
+        
+    public function getTransById($id){
+        $this->db->query("SELECT * FROM transaction WHERE id=:id");
+        $this->db->bind('id', $id);
+        return $this->db->single();
+    }
 
+    public function checkData($id){
         if($this->getTransById($id)){
+            
             $url = "https://nextar.flip.id/disburse/".$id;
-            // echo $url;
             $result = $this->request($url,"GET",'');
             if($result){
+                print_r($result);
                 $this->update($result);
             }
             else{
@@ -175,29 +191,6 @@ Class Disburse {
         }
     }
 
-    public function getTransById($id)
-    {
-        $this->db->query("SELECT * FROM transaction WHERE id=:id");
-        $this->db->bind('id', $id);
-        return $this->db->single();
-    }
-
-    public function save($data){
-        $query = "INSERT INTO transaction VALUES(:id, :amount, :status, :timestamp, :bank_code, :account_number, :beneficiary_name, :remark, :receipt, :time_served, :fee)";
-        $this->db->query($query);
-
-        foreach($data as $k=>$v){
-            $this->db->bind($k, $v);
-        }
-
-        $this->db->execute();
-
-        if($this->db->row()){
-            $msg = "Transaction request succeeded. Transaction detail saved to database.\nPress enter to go back to main menu"; 
-            $this->messageBox($msg);
-        }
-    }
-
     public function update($data){
         $query = "UPDATE transaction SET status=:status, timestamp=:timestamp, receipt=:receipt, time_served=:time_served WHERE id=:id";
         $this->db->query($query);
@@ -206,11 +199,15 @@ Class Disburse {
         $this->db->bind('receipt', $data['receipt']);
         $this->db->bind('time_served', $data['time_served']);
         $this->db->bind('id', $data['id']);
-
         $this->db->execute();
-
         if($this->db->row()){
-            $msg = "Transaction status checked and updated.\nPress enter to go back to main menu"; 
+            echo "Transaction status checked and updated.\n";
+            echo "------------------------------\n";
+            foreach($data as $k=>$v){
+                echo "\t".$k." : ".$v. "\n";
+            }
+            echo "------------------------------\n";
+            $msg = "Press enter to go back to main menu"; 
             $this->messageBox($msg);
         }
         else{
@@ -219,15 +216,9 @@ Class Disburse {
         }
     }
 
-    public function getData(){
-        $this->db->query('SELECT * FROM transaction');
-        return $this->db->resultSet();
-    }
-
+    
     public function exitDisburse(){
         exit('You have closed the application.');
     }
-
 }
-
 ?>
