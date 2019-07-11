@@ -178,7 +178,7 @@ Class Disburse {
             $url = "https://nextar.flip.id/disburse/".$id;
             $result = $this->request($url,"GET",'');
             if($result){
-                print_r($result);
+
                 $this->update($result);
             }
             else{
