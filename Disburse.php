@@ -10,7 +10,7 @@ Class Disburse {
         echo "Type 'request' to send disbursement request,\nType 'check' to check disbursement status\nType 'exit' to exit the application: ";
         $input_menu= fopen("php://stdin","r");
         $menu = trim(fgets($input_menu));
-        $this->processMenu($menu);
+        $this->processMenu(strtolower($menu));
     }
 
     public function processMenu($menu){
@@ -40,7 +40,7 @@ Class Disburse {
     public function inputRequest(){
         echo "Type Bank Code: ";
         $input_bank_code= fopen("php://stdin","r");
-        $bank_code = trim(fgets($input_bank_code));
+        $bank_code = strtolower(trim(fgets($input_bank_code)));
         echo "Type Account Number: ";
         $input_account_number= fopen("php://stdin","r");
         $account_number = trim(fgets($input_account_number));
