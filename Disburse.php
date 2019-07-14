@@ -65,11 +65,16 @@ Class Disburse {
     public function inputCheck(){
         if($result = $this->getData()){
             echo "Transaction list \n";
-            echo "---------------- \n";
+            echo "-------------------------------------------------------------------------------------------- \n";
+
+            $mask = "%-20.20s %12.12s %-10.10s %-5.5s %-20.20s %-25.25s \n";
+            printf($mask, 'Transaction Id', 'Amount', 'Status', 'Bank Code', 'Account Number', 'remark');
+            printf($mask, '--------------------', '-------------', '----------', '------------', '--------------------', '--------------------');
+            
             foreach($result as $r){
-                echo " > ".$r['id']."\n";
+                printf($mask, $r['id'], $r['amount'], $r['status'], $r['bank_code'], $r['account_number'], $r['remark']);
             }
-            echo "---------------- \n";
+            echo "-------------------------------------------------------------------------------------------- \n";
             echo "Type transaction Id:";
             $input_id= fopen("php://stdin","r");
             $id = trim(fgets($input_id));
